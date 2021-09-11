@@ -1,0 +1,236 @@
+---
+title: "Práctica 0. FMAD 2021-2022"
+author: "Rodríguez González, Álvaro"
+date: 'Curso 2021-22. Última actualización: `r format(Sys.time(), "%Y-%m-%d")`'
+output:
+  word_document: default
+  pdf_document: default
+  html_document: default
+subtitle: ICAI. Master en Big Data. Fundamentos Matemáticos del Análisis de Datos
+  (FMAD).
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r echo=FALSE,eval=FALSE, message=FALSE}
+library(tidyverse)
+```
+
+
+# Ejercicio 1
+
+**Enunciado:** Usando la función sample crea un vector dado_honesto con 100 números del 1 al 6. Haz una tabla de frecuencias absolutas (de dos maneras, con table y dplyr) y una tabla de frecuencias relativas.
+
+
+
+**Solución:**
+
+Primero crearemos el vector de dado_honesto y veremos como es:
+
+```{r sample}
+dado_honesto = sample(1:6,100,replace = TRUE)
+dado_honesto 
+```
+
+Tras crear el vector calcularemos las frecuencias absolutas con la función **table**:
+
+```{r sample2}
+table(dado_honesto)
+```
+
+También veremos las frecuencias relativas (con 3 decimales) con la función **prop.table**:
+
+```{r sample3}
+signif(prop.table(table(dado_honesto)),2)
+```
+
+
+Por último volvemos a calcular las frecuencias absolutas usando **dplyr**:
+
+
+```{r dplyr}
+datos <- data.frame(dado_honesto)
+library(tidyverse)
+datos %>% 
+  count(datos$dado_honesto)
+```
+
+
+# Ejercicio 2
+
+**Enunciado:** A continuación crea un nuevo vector dado_cargado de manera que la probabilidad de que el número elegido valga 6 sea el doble que la probabilidad de elegir cualquiera de los cinco números restantes. Lee la ayuda de sample si lo necesitas. De nuevo, haz tablas de frecuencias absolutas y relativas de este segundo vector.
+
+**Solución:**
+
+Comenzamos creamos el vector dado_cargado:
+
+```{r sample_dc}
+dado_cargado = sample(1:6,100,replace = TRUE, prob = rep(c(6/7, 12/7), times = c(5, 1)))
+dado_cargado
+```
+
+Repetimos el mismo proceso que en el ejercicio anterior (primero con table tanto frecuencia absoluta como relativa y luego con dplyr unicamente la frecuencia absoluta):
+
+```{r sample_dc2}
+table(dado_cargado)
+```
+
+```{r sample_dc3}
+signif(prop.table(table(dado_cargado)),2)
+```
+
+```{r dplyr2}
+datos2 <- data.frame(dado_cargado)
+library(tidyverse)
+datos2 %>% 
+  count(datos2$dado_cargado)
+```
+
+# Ejercicio 3
+
+**Enunciado:** Utiliza las funciones rep y seq para crear tres vectores v1, v2 y v3 con estos elementos respectivamente:
+
+- 4, 4, 4, 4, 3, 3, 3, 3, 2, 2, 2, 2, 1, 1, 1, 1
+- 1, 2, 2, 3, 3, 3, 4, 4, 4, 4, 5, 5, 5, 5, 5
+- 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4, 1, 2, 3, 4
+
+**Solución:**
+
+Primero definiremos los vectores y luego comprobaremos que lo hemos hecho bien viendolos impresos en la pantalla.
+
+````{r rep}
+v1 <- rep(seq(4,1),each = 4)
+v2 <- rep(seq(1,5), c(1,2,3,4,5))
+v3 <- rep(seq(1,4),4)
+```
+
+```{r repseq}
+v1
+v2
+v3
+```
+
+
+# Ejercicio 4 
+
+**Enunciado:** Utilizando la tabla mpg de la librería tidyverse crea una tabla mpg2 que:
+
+- contenga las filas en las que la variable class toma el valor pickup.
+
+- y las columnas de la tabla original cuyos nombres empiezan por c. No se trata de que las selecciones a mano, por sus nombres. Busca información sobre funciones auxiliares para
+select en la Sección 5.4 de R4DS.
+
+**Respuesta:**
+
+Hago la selección:
+
+```{r}
+mpg2 <- mpg %>%
+  filter(class =='pickup') %>%
+    select(starts_with('c')) 
+mpg2
+    
+```
+
+
+# Ejercicio 5
+
+**Enunciado:** Descarga el fichero census.dta. Averigua de qué tipo de fichero se trata y usa la herramienta Import DataSet del panel Environment de RStudio para leer con R los datos de ese fichero. Asegúrate de copiar en esta práctica los dos primeros comandos que llevan a cabo la importación (excluye el comando View) y que descubrirás al usar esa herramienta. Después completa los siguientes apartados con esos datos y usando dplyr y ggplot:
+
+- ¿Cuáles son las poblaciones totales de las regiones censales?
+
+- Representa esas poblaciones totales en un diagrama de barras (una barra por región
+censal).
+
+- Ordena los estados por población, de mayor a menor.
+
+- Crea una nueva variable que contenga la tasa de divorcios /matrimonios para cada
+estado.
+
+- Si nos preguntamos cuáles son los estados más envejecidos podemos responder de dos
+maneras. Mirando la edad mediana o mirando en qué estados la franja de mayor edad representa una proporción más alta de la población total. Haz una tabla en la que aparezcan los valores de estos dos criterios, ordenada según la edad mediana decreciente y muestra los 10 primeros estados de esa tabla.
+
+- Haz un histograma (con 10 intervalos) de los valores de la variable medage (edad mediana) y con la curva de densidad de la variable superpuesta.
+
+**Solución:**
+
+Primero importamos los datos con los que vamos a trabajar y los echamos un vistazo para conocer como están estructurados:
+
+```{r datos}
+library(haven)
+census <- read_dta("data/census.dta")
+```
+
+
+```{r datos2}
+census
+```
+
+Lo primero que queremos ver son las poblaciones totales de las regiones censales, es decir, la frecuencia absoluta de cada región:
+
+```{r frec_abs_cens}
+pob_reg <- census %>%
+  group_by(region) %>%
+  summarise(Poblacion = sum(pop))
+
+pob_reg
+
+```
+
+Otra forma de hacer lo que hemos hecho antes sin usar dplyr seria con el siguiente código:
+
+```{r pru}
+aggregate(census$pop, by=list(Category=census$region), FUN=sum)
+```
+
+Ahora vamos a representar las poblaciones totales en un diagrama de barras:
+
+```{r diagr}
+ggplot(pob_reg, aes(x = region, y = Poblacion)) + geom_bar(stat="identity", position="stack")
+```
+
+Ahora vamos a ordenar los estados por población, de mayor a menor:
+
+```{r ord}
+census %>% 
+  arrange(desc(pop))
+```
+A continuación crearemos una nueva variable que contendrá la tasa de divorcios /matrimonios para cada
+estado:
+
+```{r divcas}
+ratiodivcas <- census %>%
+  mutate(state, ratio = divorce/marriage) %>%
+  select(state, ratio)
+ratiodivcas
+
+```
+
+Ahora imprimiremos una tabla donde aparecerán los estados, la edad media de cada uno de ellos y el porcentaje que representa la población mayor de 65 años sobre el total. Además, ordenaremos de mayor a menor según la variable edad media (o medage que es como aparece en la tabla):
+
+
+```{r ord_env}
+census %>%
+  mutate(state, ratiopob65 = pop65p/pop) %>%
+  select(state, medage, ratiopob65) %>%
+  top_n(n = 10,medage) %>%
+  arrange(desc(medage)) 
+```
+
+
+Por último haremos un histograma (con 10 intervalos) de los valores de la variable medage y con la curva de densidad de la variable superpuesta:
+
+```{r hist}
+ggplot(data = census, aes(x = medage)) + geom_histogram(aes(y=stat(density)), bins = 10, fill = "skyblue", color = "Black") + geom_density(color="red", size=1.5)
+
+```
+
+
+
+
+
+
+
+
