@@ -215,8 +215,8 @@ Ahora imprimiremos una tabla donde aparecerán los estados, la edad media de cad
 census %>%
   mutate(state, ratiopob65 = pop65p/pop) %>%
   select(state, medage, ratiopob65) %>%
-  top_n(n = 10,medage) %>%
-  arrange(desc(medage)) 
+  arrange(desc(medage)) %>%
+  head(10)
 ```
 
 
