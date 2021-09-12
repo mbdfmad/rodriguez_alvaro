@@ -4,8 +4,8 @@ author: "Rodríguez González, Álvaro"
 date: 'Curso 2021-22. Última actualización: `r format(Sys.time(), "%Y-%m-%d")`'
 output:
   word_document: default
-  pdf_document: default
   html_document: default
+  pdf_document: default
 subtitle: ICAI. Master en Big Data. Fundamentos Matemáticos del Análisis de Datos
   (FMAD).
 ---
@@ -223,7 +223,9 @@ census %>%
 Por último haremos un histograma (con 10 intervalos) de los valores de la variable medage y con la curva de densidad de la variable superpuesta:
 
 ```{r hist}
-ggplot(data = census, aes(x = medage)) + geom_histogram(aes(y=stat(density)), bins = 10, fill = "skyblue", color = "Black") + geom_density(color="red", size=1.5)
+ggplot(data = census, aes(x = medage)) + 
+  geom_histogram(aes(y=stat(density)), bins = 10, fill = "skyblue", color = "Black") +       
+  geom_density(color="red", size=1.5)
 
 ```
 
