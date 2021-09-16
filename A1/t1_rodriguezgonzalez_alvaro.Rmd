@@ -1,0 +1,442 @@
+---
+title: "Tarea 1. FMAD 2021-2022"
+subtitle: ICAI. Máster en Big Data. Fundamentos Matemáticos del Análisis de Datos
+  (FMAD).
+author: "Rodríguez González, Álvaro"
+date: 'Curso 2021-22. Última actualización: `r format(Sys.time(), "%Y-%m-%d")`'
+linestretch: "1.25"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+
+\newpage
+\tableofcontents
+\newpage
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r lib, include=FALSE, message=FALSE}
+library(tidyverse)
+library(viridisLite)
+library(gridExtra)
+library(nycflights13)
+library(haven)
+library(ggplot2)
+```
+
+
+# Ejercicio 1. Análisis exploratorio de un conjunto de datos y operaciones con dplyr.
+
+Lo primero que haremos será cargar el fichero de datos choresterol.csv como chlstrl:
+
+```{r carga}
+chlstrl = read.csv("./data/cholesterol.csv",header = TRUE, sep= ",")
+knitr::kable(head(chlstrl,10))
+```
+
+Antes de comenzar a realizar un análisis más técnico vamos a comentar como es la estructura del data frame sobre el que vamos a trabajar:
+
+- El data frame está formado por 7 columnas (es decir, las variables con las que vamos a trabajar) y de 403 filas (las observaciones que tenemos, nuestros datos a analizar).
+- Cabe destacar que dentro del data frame encontramos datos ausentes como son el chol de la fila 28, el height de la fila 64, 87, 196, 232 y 318, el weight de la fila 162, el weist de la fila 337 y 394 y la heist de la fila 337 y 394.
+
+Esto también lo podemos hacer con R a través de los siguientes bloques de código:
+
+```{r datos}
+str(chlstrl)
+```
+
+
+```{r datos_2}
+sum(is.na(chlstrl))
+which(is.na(chlstrl))
+```
+
+
+Una vez revisada la estructura del data frame podemos comenzar con el análisis exploratorio, para el cual trabajaremos en función del tipo de variable, distinguiendo entre variable cuantitativa y cualitativa. Comenzaremos con la única variable cualitativa que encontramos en el data frame, el género.
+
+Para comenzar el análisis exploratorio de la variable género calcularemos la frecuencia absoluta y la frecuencia relativa:
+
+```{r frec_abs_genre}
+table(chlstrl$gender)
+signif(prop.table(table(chlstrl$gender)),3)
+```
+
+  
+Por último haremos un diagrama de barras donde veremos la distribución de hombres y mujeres en los encuestados:
+
+
+```{r diag_barr, fig.align='center',fig.width=7, fig.height=4.3}
+ggplot(chlstrl) + geom_bar(mapping = aes(x = gender), fill= viridis(2))
+```
+
+Una vez hecho el análisis exploratorio del caso cualitativo realizaremos el análisis exploratorio de una variable cuantitativa, que en nuestro caso serán tanto la edad (que no contiene valores nulos) como el colesterol (que sí contiene valores nulos).
+
+Lo primero que haremos será calcular un resumen numérico básico (donde se calculará el valor mínimo, máximo, el primer y tercer cuartil, la media y la mediana así como la desviación típica y la varianza), primero lo haremos de la edad y posteriormente del colesterol.
+
+```{r res_bas}
+summary(chlstrl$age)
+sd(chlstrl$age)
+var(chlstrl$age)
+```
+
+```{r res_bas_col}
+summary(chlstrl$chol)
+sd(chlstrl$chol, na.rm = TRUE)
+var(chlstrl$chol, na.rm = TRUE)
+```
+
+Otra forma de hacerlo, aunque bastante más laboriosa, si nuestra variable tiene valores NA es la siguiente:
+
+```{r otro}
+chlstrl_na <- chlstrl[!is.na(chlstrl$chol),]
+chol_sin_na <- chlstrl_na$chol
+sd(chol_sin_na)
+```
+
+```{r otro2}
+var(chol_sin_na)
+```
+
+
+
+Una vez hecho el resumen numérico de ambas variables pasaremos al resumen gráfico, el cual se adaptará al tipo de variable y la diferente interpretación de los datos.
+
+```{r graf_edad_2, fig.align="center", fig.width=5.3, fig.height=4}
+ggplot(chlstrl) + geom_histogram(mapping = aes(x = age), bins = 16, 
+                fill = "skyblue", color="black" )
+```
+
+```{r hist_dens, fig.align="center", fig.width=5.3, fig.height=4}
+ggplot(chlstrl, aes(x =age)) + 
+  geom_histogram(aes(y=stat(density)), breaks = seq(min(chlstrl$age), 
+      max(chlstrl$age), length.out = 17) , fill = "skyblue", color="black") + 
+      geom_density(color ="red")
+```
+
+
+
+```{r boxpl, fig.align="center"}
+boxplot(chlstrl$age,col="skyblue", mapping = aes(y = age))
+```
+
+  
+Para trabajar con los datos del colesterol será importante eliminar aquellas filas donde los valores son nulos, ya que si no los quitamos nos puede dar error.
+
+```{r elim_na, fig.align="center"}
+datos_sinna_chol <- chlstrl[!is.na(chlstrl$chol),] 
+```
+
+Haremos varios tipos de gráficas, donde encontraremos gráficos de barras, boxplot e histogramas.
+
+```{r graf_, fig.align="center", fig.width=5.3, fig.height=4}
+ggplot(datos_sinna_chol) + geom_histogram(mapping = aes(x = chol), 
+            breaks = seq(min(datos_sinna_chol$chol), max(datos_sinna_chol$chol), 
+                         length.out=15 ), fill = "skyblue", color="black" )
+```
+
+Cuando se habla de colesterol puede ser interesante ver que cantidad de personas tienen colesterol a niveles saludables, a niveles medio-altos y niveles altos. Pero como nuestra variable de colesterol viene dada de forma cuantitativa y a nosotros nos gustaría obtener tres tramos distintos vamos a crear una función que nos distinga el nivel de colesterol en función de los datos. Esta función también cambiará el tipo de variable, ya que pasaremos a una variable de tipo cualitativa que tendrá 3 posibles valores.
+
+```{r function_chol}
+divi_chol = function(x){
+  distr_col = c()
+  for (i in 1:length(x)){
+    if (x[i] < 200){
+      distr_col = c(distr_col,"Nivel_ideal")
+    } else {
+      if (x[i]>= 200 & x[i]<240){
+        distr_col = c(distr_col,"Nivel_medio_alto")
+      }
+      else {
+        distr_col = c(distr_col,"Nivel_alto")
+      }
+    }
+  }
+  distr_col
+}
+```
+
+Una vez creada la función, vamos a aplicarla sobre la columna del colesterol. Tras ello, haremos un gráfico circular o de tarta donde podremos ver como ser distribuyen los diferentes niveles de colesterol.
+
+
+```{r fig.align="center", fig.width=7, fig.height=6}
+distrib_por_niv <- data.frame(divi_chol(datos_sinna_chol$chol))
+pie(table(distrib_por_niv), labels = c("Nivel Alto", "Nivel Ideal", "Nivel Medio-Alto"))
+```
+
+
+
+Por último hacemos el boxplot del colesterol:
+
+
+```{r boxpl_chol, fig.align='center'}
+boxplot(datos_sinna_chol$chol,col="skyblue", mapping = aes(y = chol))
+```
+
+      
+Los valores de height y weight están en pulgadas y libras respectivamente, por ello vamos a pasarlos al unidades del sistema internacional como son el metro y el kilo. Además vamos a definir un nuevo data frame donde ambos valores esten en unidades del sistema internacional.
+
+
+```{r sist_int}
+datos_si <- chlstrl %>%
+  mutate(height = height * 0.0254, weight = weight * 0.454)
+knitr::kable(head(datos_si,10))
+```
+
+Ahora vamos a añadir una nueva columna que llamaremos BMI que vendrá dada por la siguiente ecuación:
+
+$$BMI = \frac{weight}{height^2}$$
+Pero antes tenemos que eliminar todas aquellas filas que tienen espacios en blanco ya sea en weight o en height.
+
+
+```{r}
+datos_si <- datos_si %>% 
+  mutate(datos_si, BMI = weight/height^2)
+knitr::kable(head(datos_si,10))
+```
+
+La siguiente parte de este ejercicio consistirá en crear una nueva columna llamada ageGroup dividiendo la edad en tres niveles.
+
+Para ello, primero tendremos que crear una función que nos diga en que rango de edad se encuentra:
+
+```{r func_edad}
+divid_age = function(x){
+  distr_col = c()
+  for (i in 1:length(x)){
+    if (x[i] <= 40){
+      distr_col = c(distr_col,"(10,40]")
+    } else {
+      if (x[i]>40 & x[i]<=70){
+        distr_col = c(distr_col,"(40,70]")
+      }
+      else {
+        distr_col = c(distr_col,"(70,100]")
+      }
+    }
+  }
+  distr_col
+}
+```
+
+
+```{r nuev_grup}
+datos_si <- datos_si %>%
+  mutate(datos_si, ageGroup = divid_age(age))
+knitr::kable(head(datos_si,10))
+```
+Ahora usando dplyr vamos calcular cuántas observaciones hay en cada nivel de ageGroup.
+
+```{r 53}
+datos_si %>%
+  count(ageGroup)
+
+```
+
+
+
+Y por último usando aquellas observaciones que corresponden a mujeres, ¿cuál es la media del nivel de colesterol y de BMI en cada uno de esos grupos de edad?
+
+Primero filtraremos para coger todos los datos de las mujeres y luego usaremos summarise para sacar la media de ambos:
+
+```{r 43}
+datos_si %>%
+  group_by(ageGroup) %>%
+  filter(gender == "female") %>%
+  summarise(media_chol = mean(chol, na.rm = TRUE), media_BMI = mean(BMI, na.rm = TRUE))
+
+```
+
+
+
+
+\newpage
+
+# Ejercicio 2: Funciones de R.
+
+**Enunciado:** Crea una función de R llamada `cambiosSigno` que dado un vector `x` de números enteros no nulos calcule cuántos cambios de signo ha habido. Es decir, cuántas veces el signo de un elemento es distinto del signo del elemento previo.
+
+**Solución:** 
+
+Comenzamos creando la función `cambiosSigno` y comprobando que funciona correctamente:
+
+```{r func}
+cambioSigno = function(vect_num){
+  cambios = 0
+  for (i in 1:(length(vect_num)-1)){
+    if (vect_num[i]*vect_num[i+1] < 0){
+      cambios = cambios + 1
+    }
+  }
+  cambios
+}
+```
+
+
+```{r func_comp}
+(vect = sample(c(-20:-1,1:20),20, replace = TRUE))
+cambioSigno(vect)
+```
+
+Ahora vamos a modificar la función anterior para que en vez de devolvernos cuantos cambios se han producido nos devuelva un vector formado por las posiciones donde se han producido dichos cambios de signo:
+
+```{r func_pos}
+cambiosSignoPos = function(vect_num){
+  posiciones = c()
+  for (i in 1:(length(vect_num)-1)){
+    if (vect_num[i]*vect_num[i+1] < 0){
+      posiciones = c(posiciones,i+1)
+    }
+  }
+  posiciones
+}
+```
+
+```{r func_pos_comp}
+(vect = sample(c(-20:-1,1:20),20, replace = TRUE))
+cambiosSignoPos(vect)
+```
+
+
+\newpage
+
+# Ejercicio 3. Ejercicios libro R4DS.
+
+## Ejercicio 3.1
+
+**Enunciado:** Del libro de R4DS:
+
+- Haz el ejercicio 6 de la Sección 3.6.1.
+
+**Solución:** 
+
+```{r, message=FALSE, include=FALSE}
+library(gridExtra)
+```
+
+
+```{r juntar, message=FALSE}
+
+p1 <- ggplot(mpg, mapping = aes(x = displ, y=hwy)) + 
+  geom_point(color = "black") + 
+  geom_smooth(se = FALSE)
+
+p2 <- ggplot(mpg, mapping = aes(x = displ, y=hwy , group= drv)) + 
+  geom_point(color = "black") + 
+  geom_smooth(se = FALSE)
+
+p3 <- ggplot(mpg, mapping = aes(x = displ, y=hwy, color = drv)) + 
+  geom_point() + 
+  geom_smooth(se = FALSE)
+
+p4 <- ggplot(mpg, mapping = aes(x = displ, y=hwy)) + 
+  geom_point(mapping = aes(color = drv)) + 
+  geom_smooth(se = FALSE)
+
+p5 <- ggplot(mpg, mapping = aes(x = displ, y=hwy)) + 
+  geom_point(mapping = aes(color = drv)) + 
+  geom_smooth(mapping = aes(linetype = drv),se = FALSE)
+
+p6 <- ggplot(mpg, mapping = aes(x = displ, y=hwy)) +
+  geom_point(size = 4, color = "white") + 
+  geom_point(aes(color = drv)) 
+
+grid.arrange(p1,p2,p3,p4,p5,p6, nrow = 3)
+```
+
+
+
+
+
+## Ejercicio 3.2
+
+```{r carga5, include = FALSE, message = FALSE}
+library(nycflights13)
+```
+
+
+**Enunciado y soluciones:** Encuentra todos los vuelos que:
+
+1. Tuvieron un retraso de dos horas o más.
+
+```{r vue_ret}
+flights %>%
+  filter(arr_delay >= 120) 
+```
+\
+
+2. Volaron a Houston (IAH or HOU).
+
+```{r vue_hou}
+flights %>%
+  filter(dest == "IAH" | dest == "HOU") 
+```
+\
+
+3. Fueron operados por United, American, or Delta.
+
+Para conocer cuales son las abreviaturas tenemos que recurrir a una tabla distinta, la de airlines. Una vez vemos cuales son las abreviaturas hacemos el filtrado.
+
+```{r fly_opr}
+flights %>% 
+  filter(carrier == "DL" | carrier == "UA" | carrier == "AA") 
+```
+\
+
+4. Salió en verano (julio, agosto y septiembre).
+
+```{r fly4}
+flights %>%
+  filter(month == 7 | month == 8 | month == 9) 
+```
+\
+
+5. Llegó con retraso de más de 2 horas, pero no salió tarde.
+
+```{r fly5}
+flights %>%
+  filter(arr_delay > 120 & dep_delay <= 0) 
+```
+\
+
+6. Se retrasaron al menos una hora, pero recuperaron más de 30 minutos en vuelo.
+
+
+```{r fly_betw}
+flights %>% 
+  filter(dep_delay >= 60 & arr_delay < 30) 
+```
+\
+
+7. Partió entre la medianoche y las 6 a.m. (inclusive).  
+
+
+```{r fly_dep_m6}
+flights %>%
+  filter(dep_time >= 000 & dep_time <= 600) 
+```
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
