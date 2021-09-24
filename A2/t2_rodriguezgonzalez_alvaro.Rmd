@@ -1,0 +1,726 @@
+---
+title: "Tarea 2. FMAD 2021-2022"
+subtitle: ICAI. Máster en Big Data. Fundamentos Matemáticos del Análisis de Datos
+  (FMAD).
+author: "Rodríguez González, Álvaro"
+date: 'Curso 2021-22. Última actualización: `r format(Sys.time(), "%Y-%m-%d")`'
+linestretch: "1.25"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+
+```{r echo=FALSE,warning = FALSE, message=FALSE}
+library(tidyverse)
+library(ggplot2)
+library(gridExtra)
+library(MASS)
+library(viridisLite)
+```
+
+
+
+\newpage
+\tableofcontents
+\newpage
+
+
+
+
+
+# Ejercicio 1. Simulando variables aleatorias discretas.
+
+## Apartado 1 
+
+**Enunciado:** La variable aleatoria discreta $X_1$ tiene esta tabla de densidad de probabilidad (es la variable que se usa como ejemplo en la Sesión ):
+$$
+\begin{array}{|c|c|c|c|c|c|c|}
+\hline
+\text{valor de }X_1 & 0 & 1 & 2 & 3 \\
+\hline
+\text{Probabilidad de ese valor }P(X = x_i) & \dfrac{64}{125} &
+\dfrac{48}{125}& \dfrac{12}{125} & \dfrac{1}{125}\rule{0mm}{6mm} \\[3mm]
+\hline
+\end{array}
+$$
+
+
+Calcula la media y la varianza teóricas de esta variable.
+
+**Solución:** Lo primero de todo será saber como es la función para calcular la media teórica. Esta viene dada por la siguente expresión:
+
+
+$$ 
+\mathbb{E}(X) = \mu = \sum_{i=1}^{n} x_i * \mathbb{P}(x_i)
+$$
+
+Por tanto, usando la expresión anterior tenemos:
+
+```{r media_poblacional}
+(media_poblacional <- sum(c(0:3)*c(64/125,48/125,12/125,1/125)))
+```
+
+En cuanto a la varianza esta tiene la siguiente expresión, que desarrollandola obtenemos una expresión más sencilla, que se usará para el cálculo.
+
+$$
+\text{Var}(X) = \mathbb{E}[(X - \mu)^2] \qquad \longrightarrow \qquad \text{Var}(X) = \mathbb{E}(X^2) - \mathbb{E}(X)
+$$
+
+```{r varianza_poblacional}
+(varianza_poblacional <- sum(c(0:3)^2*c(64/125,48/125,12/125,1/125)) - media_poblacional)
+```
+
+
+## Apartado 2
+
+**Enunciado:** Combina `sample` con `replicate` para simular cien mil muestras de tamaño 10 de esta variable $X_1$. Estudia la distribución de las medias muestrales como hemos hecho en ejemplos previos, ilustrando con gráficas la distribución de esas medias muestrales. Cambia después el tamaño de la muestra a 30 y repite el análisis. 
+
+**Solución:** Comenzamos simulando cien mil muestras de tamaño 10 de la variable $X_1$.
+
+```{r simulacion}
+sim_muestra <- replicate(100000, {
+  mean(sample(0:3,10,replace = TRUE, prob = c(64,48,12,1)))
+})
+```
+
+
+Ahora representamos las medias obtenidas de esta simulación a través de un histograma:
+
+```{r hist_1, fig.align='center', fig.height=4, fig.width=6}
+hist(sim_muestra, main = NULL ,col = "orange",)
+```
+
+
+Otra forma de hacer el histograma es usando ggplot:
+
+```{r hist_2, fig.align='center', fig.height=4, fig.width=6}
+sim_muestra_dataframe <- data.frame(sim_muestra)
+ggplot(sim_muestra_dataframe, mapping = aes(x = sim_muestra)) + 
+  geom_histogram(breaks = seq(min(sim_muestra_dataframe$sim_muestra),
+            max(sim_muestra_dataframe$sim_muestra), length.out = 18),
+            fill = "orange", color="black")
+```
+
+
+Después de hacer los histogramas podemos realizar una curva de densidad:
+
+```{r 5677, fig.align='center', fig.height=3.5, fig.width=5}
+ggplot(sim_muestra_dataframe) +
+  geom_density(mapping = aes(x = sim_muestra), color="black", size=1.5)
+```
+
+Ahora cambio el tamaño de la muestra a 30 y repito el mismo análisis hecho anteriormente.
+
+```{r simulacion_2}
+sim_muestra2 <- replicate(100000, {
+  mean(sample(0:3,30,replace = TRUE, prob = c(64,48,12,1)))
+})
+```
+
+Y su vez rpetimos el proceso que hemos hecho antes para ilustar la muestra.
+
+```{r 5466, echo=FALSE, message=FALSE}
+sim_muestra2_dataframe <- data.frame(sim_muestra2)
+```
+
+
+```{r 856, fig.align='center', fig.height=3, fig.width=5}
+ ggplot(sim_muestra2_dataframe) +
+          geom_density(mapping = aes(x = sim_muestra2), color="black", size=1.5)
+```
+
+
+```{r compuesto}
+p1 <- ggplot(sim_muestra_dataframe, mapping = aes(x = sim_muestra)) + 
+      geom_histogram(breaks = seq(min(sim_muestra_dataframe$sim_muestra),
+            max(sim_muestra_dataframe$sim_muestra), length.out = 18),
+            fill = "orange", color="black")
+
+sim_muestra2_dataframe <- data.frame(sim_muestra2)
+
+p2 <- ggplot(sim_muestra2_dataframe, mapping = aes(x = sim_muestra2)) + 
+      geom_histogram(breaks = seq(min(sim_muestra2_dataframe$sim_muestra2),
+            max(sim_muestra2_dataframe$sim_muestra2), length.out = 18),
+            fill = "blue", color="black")
+
+grid.arrange(p1,p2, nrow = 1)
+```
+Por último representamos nuestras curvas de densidad de ambas muestras.
+
+```{r}
+p11 <- ggplot(sim_muestra_dataframe) +
+          geom_density(mapping = aes(x = sim_muestra), color="black", size=1.5)
+
+p22 <-  ggplot(sim_muestra2_dataframe) +
+          geom_density(mapping = aes(x = sim_muestra2), color="black", size=1.5)
+
+grid.arrange(p11,p22, nrow = 1)
+```
+
+
+
+## Apartado 3
+**Enunciado:** La variable aleatoria discreta $X_2$ tiene esta tabla de densidad de probabilidad:
+$$
+\begin{array}{|c|c|c|c|c|c|}
+\hline
+\text{valor de }X_2 & 0 & 1 & 2 \\
+\hline
+\text{Probabilidad de ese valor }P(X = x_i) & \dfrac{1}{2} &
+\dfrac{1}{4}&  \dfrac{1}{4}\rule{0mm}{6mm} \\[3mm]
+\hline
+\end{array}
+$$
+
+
+Suponemos que $X_1$ y $X_2$ son independientes. ¿Qué valores puede tomar la suma $X_1 + X_2$? ¿Cuál es su tabla de probabilidad?
+
+
+**Solución:** Vamos a responder por partes:
+
+- ¿Qué valores puede tomar la suma $X_1 + X_2$? 
+
+La suma de la variable $X_1 + X_2$ puede tomar valores desde 0 hasta 5. Esto se debe a que la variable $X_1$ toma valores comprendidos entre 0 y 3 (ambos incluidos) y la variable $X_2$ toma valores comprendidos entre 0 y 2 (ambos incluidos).
+
+- ¿Cuál es su tabla de probabilidad?
+
+Para una notación más sencilla y resumida renombraremos a la variable $X_1 + X_2$ como $Y$. Por ello la tabla de probabilidad se nos queda de la siguiente forma (sin calcular ningún elemento de la tabla).
+
+$$
+\begin{array}{|c|c|c|c|c|c|c|}
+\hline
+\text{valor de }Y & 0 & 1 & 2 & 3 & 4 & 5 \\
+\hline
+\text{Probabilidad de ese valor }P(Y = y_i) & ? &
+? &  ? & ? & ? & ? \\
+\hline
+\end{array}
+$$
+Ahora comenzaremos a calcular las probabilidades que tenemos en la tabla:
+
+- $\mathbb{P}(Y = 0)$ o $\mathbb{P}(X_1 + X_2 = 0)$
+
+En este caso la única posibilidad es que tanto $X_1$ como $X_2$ sean 0. Esto se puede representar en lenguaje matematico como:
+
+$$
+\mathbb{P}(X_1 = 0 \text{ y } X_2 = 0) \qquad \longrightarrow \qquad \mathbb{P}((X_1 = 0) \cap (X_2 = 0))
+$$
+
+Ahora como $X_1$ y $X_2$ son variables independientes podemos afirmar lo siguiente:
+
+$$
+\mathbb{P}((X_1 = 0) \cap (X_2 = 0)) = \mathbb{P}(X_1 = 0) \cdot \mathbb{P}(X_2 = 0)
+$$
+
+Por ello, solo nos queda mirar a la tabla de ambas variables y calcular la expresión anterior. Pero antes vamos a crear dos vectores con las probabilidades de ambas variables:
+
+```{r probas_3}
+prob1 = c(64/125,48/125,12/125,1/125)
+prob2 <- c(1/2,1/4,1/4)
+```
+
+Calculamos $\mathbb{P}(Y = 0)$:
+
+```{r prob_0}
+(py0 <- fractions(prob_0 <- prob1[1]*prob2[1]))
+```
+
+
+- $\mathbb{P}(Y = 1)$ o $\mathbb{P}(X_1 + X_2 = 1)$
+
+En este caso hay dos posibilidades, o que $X_1$ sea 1 y $X_2$ sea 0 o que $X_1$ sea 0 y $X_2$ sea 1. Calculamos ambas probabilidades:
+
+```{r probabil}
+(p10 <- fractions(prob1[2]*prob2[1]))
+(p01 <- fractions(prob1[1]*prob2[2]))
+```
+
+La probabilidad de que la suma sea 1 es la suma de ambas probabilidades.
+
+```{r py1}
+(py1 <- fractions(sum(c(p10,p01))))
+```
+
+- $\mathbb{P}(Y = 2)$ o $\mathbb{P}(X_1 + X_2 = 2)$
+
+Aquí volvemos a realizar el mismo procedimiento que antes, veamos que casos nos dan lo que buscamos. En primer lugar $X_1 = 2 \text{ y } X_2 = 0$, $X_1 = 1 \text{ y } X_2 = 1$ y $X_1 = 0 \text{ y } X_2 = 2$. Aplicando independencia es muy sencillo sacar las probabilidades de cada uno:
+
+```{r probas_2}
+(p20 <- fractions(prob1[3]*prob2[1]))
+(p11 <- fractions(prob1[2]*prob2[2]))
+(p02 <- fractions(prob1[1]*prob2[3]))
+```
+
+Volviendo a sumar las probabilidades obtenemos la probabilidad buscada.
+
+```{r proby2}
+(py2 <- fractions(sum(c(p20,p11,p02))))
+```
+
+- $\mathbb{P}(Y = 3)$ o $\mathbb{P}(X_1 + X_2 = 3)$
+
+Como en los casos anteriores tenemos varias formas de que la suma de las variables de 3. Las posibilidades son las siguientes: $X_1 = 3 \text{ y } X_2 = 0$, $X_1 = 2 \text{ y } X_2 = 1$ y $X_1 = 1 \text{ y } X_2 = 2$. 
+
+Calculamos la probabilidad de cada uno de los casos:
+
+```{r calc_prob}
+(p30 <- fractions(prob1[4]*prob2[1]))
+(p21 <- fractions(prob1[3]*prob2[2]))
+(p12 <- fractions(prob1[2]*prob2[3]))
+```
+
+Y sumando todas:
+
+```{r suma}
+(py3 <- fractions(sum(c(p30,p21,p12))))
+```
+
+
+- $\mathbb{P}(Y = 4)$ o $\mathbb{P}(X_1 + X_2 = 4)$
+
+En este caso las posibilidades se van reduciendo ya que $X_2$ toma como máximo valor el 2. Repetimos el mismo procedimiento que en los casos anteriores.
+
+```{r probas}
+(p31 <- fractions(prob1[4]*prob2[2]))
+(p22 <- fractions(prob1[3]*prob2[3]))
+(py4 <- fractions(sum(c(p31,p22))))
+```
+
+
+- $\mathbb{P}(Y = 5)$ o $\mathbb{P}(X_1 + X_2 = 5)$
+
+Procedemos de forma análoga a las anteriores.
+
+```{r py5}
+(py5 <- fractions(prob1[4]*prob2[3]))
+```
+
+
+Ahora representamos en una tabla las probabilidades y posteriormente comprobamos que la suma de todas las probabilidades de 1.
+
+$$
+\begin{array}{|c|c|c|c|c|c|c|}
+\hline
+\text{valor de }Y & 0 & 1 & 2 & 3 & 4 & 5 \\
+\hline
+\text{Probabilidad de ese valor }P(Y = y_i) & \dfrac{32}{125} &
+\dfrac{8}{25} &  \dfrac{34}{125} & \dfrac{31}{250} & \dfrac{13}{500} & \dfrac{1}{500} \rule{0mm}{6mm} \\
+\hline
+\end{array}
+$$
+
+
+```{r comproba}
+(sum(c(py0,py1,py2,py3,py4,py5))) == 1
+```
+
+
+
+## Apartado 4
+
+**Enunciado:** Calcula la media teórica de la suma $X_1 + X_2$. Después usa `sample` y `replicate` para simular cien mil *valores* de esta variable suma. Calcula la media de esos valores. *Advertencia:* no es el mismo tipo de análisis que hemos hecho en el segundo apartado. 
+
+
+**Solución:** El cálculo de la media teórica de la suma $X_1 + X_2$ se hace de la misma forma que hicimos el apartado 1. Se debe usar la noción de esperanza matemática de la variable suma ($\mathbb{E}(X_1 + X_2)$):
+
+```{r media_4}
+proby <- c(py0,py1,py2,py3,py4,py5)
+(sum(c(0:5)*proby))
+```
+
+Usaremos sample y replicate para simular cien mil valores de esta variable suma y calcularemos la media de dichos valores.
+
+```{r ok}
+datos_repsam <- replicate(100000, {
+  sample(0:5,1,replace = TRUE, prob = proby)})
+mean(datos_repsam)
+```
+
+
+
+\newpage
+
+# Ejercicio 2. Datos limpios
+
+**Enunciado:** El fichero a descargar contiene las notas de los alumnos de una clase, que hicieron dos tests cada semana durante cinco semanas. La tabla de datos no cumple los principios de tidy data que hemos visto en clase. Tu tarea en este ejercicio es explicar por qué no se cumplen y obtener una tabla de datos limpios con la misma información usando tidyR.
+
+**Solución:**
+
+Lo primero que haremos será descargar e importar el fichero de datos sobre el que trabajaremos:
+
+```{r, message=FALSE}
+testResults <- read_csv("data/testResults.csv")
+knitr::kable(head(testResults,10))
+```
+
+Antes de comenzar vamos a recordar los principios del tidy data. Se dice que un conjunto de datos es limpio se cumple las siguientes tres condiciones:
+
+- Cada variable tiene su propia columna.
+
+- Cada observación tiene su propia fila.
+
+- Cada valor tiene su propia celda.
+
+Ahora vamos a ver porque esta tabla de datos no se considera limpia, iremos viendo una a una si se cumplen las condiciones enunciadas anteriormente:
+
+- ¿Cada variable tiene su propia columna?
+
+No, el claro ejemplo es que podemos encontrar que tanto la variable género como la variable edad están encuadradas en una misma columna. También tenemos el caso de la variable semanas, que aparece en la parte superior de forma expandida por semanas (lo mismo que ocurría en los apuntes con la varibale meses).
+
+Una vez visto donde se encontraban nuestro problemas vamos a solucionarlos para convertir a la tabla en una tabla de datos limpios. Para ello pasaremos las semanas a una columna que se llamará week. A su vez también separaremos la columna gender_age en dos columnas que serán la variable género (gender) y años (age).
+
+```{r}
+prueba2 <- testResults %>%
+   pivot_longer(week1:week5, names_to = "week") %>%
+   separate(gender_age, c("gender","age"), sep="_", convert = TRUE)
+knitr::kable(head(prueba2,10))
+``` 
+
+
+
+
+\newpage
+
+# Ejercicio 3. Lectura de R4DS.
+
+## Apartado 1
+
+**Enunciado:** Haz el ejercicio 2 de la Sección 7.5.1.1 de R4DS. ¿Qué variable del conjunto de datos de diamantes es más importante para predecir el precio de un diamante? ¿Cómo se correlaciona esa variable con el corte? ¿Por qué la combinación de esas dos relaciones hace que los diamantes de menor calidad sean más caros?
+
+**Solución:** Lo primero que vamos a hacer es ver la tabla y conocer con que variables trabajamos.
+
+```{r}
+knitr::kable(head(diamonds,6))
+```
+Vamos a estudiar como se comportan las diferentes variables cualitativas con la variable precio. Esto lo haremos con los histogramas donde agruparemos los datos en torno a la variable que estemos estudiando, como serán el corte, color y claridad.
+
+- Corte y precio
+
+```{r 34545, fig.align='center', fig.height=3, fig.width=4}
+ggplot(diamonds, mapping = aes(x = cut, y= price)) +
+  geom_boxplot()
+```
+En un primer vistazo al histograma podemos afirmar que no existe correlación entre el tipo de corte de los diamantes y el precio. Esto se ve muy bien en que los diferentes tipos de corte presentan precios medios muy similares (incluso valiendo más aquellos que peor cortados están). También no se puede afirmar que exista correlación entre ambas variables debido a la gran variabilidad de los datos.
+
+
+
+
+- Color y precio
+
+```{r 5435, fig.align='center', fig.height=3, fig.width=4}
+ggplot(diamonds, mapping = aes(x = color, y= price)) +
+  geom_boxplot()
+```
+En este caso en un primer vistazo nos puede llamar la atención que cuanto más lejana es la letra el coste medio aumenta, lo que nos podría hacer pensar que existe una correlación positiva entre ambas variables. Pero esto no es así, debido principalmente a lo mismo que en el caso anterior. Existe una gran variabilidad de los datos por lo que no podemos afirmar nada de lo comentado anteriormente.
+
+- Claridad y precio
+
+```{r 453, fig.align='center', fig.height=3, fig.width=4}
+ggplot(diamonds, mapping = aes(x = clarity, y= price)) +
+  geom_boxplot()
+```
+Esta última variable cualitativa presenta los mismos problemas que la variable corte, no se presenta ningún tipo relación con la variable precio debido a la gran variabilidad de los datos y una serie de medias muy similares. 
+
+
+Una vez visto y analizado como se comportan todas las variables cualitativas con la variable precio vamos a pasar a ver que ocurre con las variables cuantitativas como son los quilates, la profundidad y tres variables más.
+
+- Quilates y precio
+
+```{r 45353, fig.align='center', fig.height=4, fig.width=6}
+ggplot(diamonds, aes(x = carat, y = price)) +
+  geom_point()
+```
+
+A diferencia de las variables vistas hasta ahora, la variable quilates presenta una fuerte correlación con la variable precio, ya que como podemos observar a mayor número de quilates el diamante tiene mayor precio. Además al tratarse de una variable cuantitativa podemos calcular la correlación de ambas variables.
+
+```{r corr}
+cor(diamonds$carat, diamonds$price)
+```
+
+Una correlación de 0.92 indica un alto grado de ajuste lineal del precio en términos del número de quilates. Por tanto, con un aumento en el número de quilates esperamos un incremento en el precio.
+
+También si lo deseamos podemos ver la recta de regresión de como la variable quilate determina el precio.
+
+```{r recta, warning=FALSE, message=FALSE}
+coefs <- lm(diamonds$price ~ diamonds$carat)
+plot(diamonds$carat, diamonds$price)
+abline(coefs, col = "red")
+```
+
+
+- Profundidad y precio
+
+```{r 5463, fig.align='center', fig.height=4, fig.width=6}
+ggplot(diamonds, aes(x = depth, y = price)) +
+  geom_point()
+```
+
+De un simple vistazo podemos afirmar que la variable profundidad no tiene ningún tipo de correlación con la variable precio. Esto se debe a que los valores de la variable profundidad se encuentra entre 55 y 70, y lo que determina el precio no será la profundidad si no otra variable ya que no se observa que un aumento de la profundidad aumente o disminuya el precio. 
+
+También podemos calcular el coeficiente de correlación lineal de ambas variables.
+
+```{r}
+cor(diamonds$depth, diamonds$price)
+```
+
+El coeficiente es cercano a 0, por lo que nos esta indicando que no existe ninguna relación entre ambas variables.
+
+- Tabla y precio
+
+```{r 765, fig.align='center', fig.height=4, fig.width=6}
+ggplot(diamonds, aes(x = table, y = price)) +
+  geom_point()
+```
+Este caso es similar al de la profundidad y el precio, por tanto podemos afirmar que no existe correlación entre estas variables.
+
+- X y precio
+
+```{r 5432, fig.align='center', fig.height=3, fig.width=5}
+ggplot(diamonds, aes(x = x, y = price)) +
+  geom_point()
+```
+
+A simple vista podemos observar que un aumento en el valor de la variable x supone un aumento en el precio. Se puede interpretar que el crecimiento es de tipo exponencial debido a la curva que forman los puntos representados. Para confirmar que existe tal grado de correlación vamos a calcular tanto su coeficiente de correlación lineal y su recta de regresión.
+
+```{r}
+(cor(diamonds$x, diamonds$price))
+```
+
+```{r rect2, fig.align='center', fig.height=4, fig.width=5}
+coefs_xp <- lm(diamonds$price ~ diamonds$x)
+plot(diamonds$x, diamonds$price)
+abline(coefs_xp, col = "red")
+```
+Tras estos dos cálculos podemos afirmar que existe un alto grado de ajuste lineal del precio en términos de la variable x. Pero si cabe destacar que a pesar de que esta variable influye en el precio tiene un mayor peso el número de quilates.
+
+
+- Y y precio
+
+```{r 4564, fig.align='center', fig.height=4, fig.width=6}
+ggplot(diamonds, aes(x = y, y = price)) +
+  geom_point()
+```
+
+Este caso es muy parecido al de la profundidad, por tanto no hace falta explicar nada.
+
+
+
+
+
+
+
+## Apartado 2
+
+**Enunciado:** Haz el ejercicio 4 de la Sección 12.6.1 de R4DS. Para cada país, año y sexo, calcule el número total de casos de TB. Realiza una visualización informativa de los datos.
+
+
+**Solución:** Lo primero será ver los datos de los que disponemos y si fuera necesario limpiarlos.
+
+```{r 3342}
+head(who,10)
+```
+Vemos que los datos no son datos limpios por lo que vamos a hacer las modificaciones necesarias para que podamos trabajar correctamente con ellos.
+
+```{r tidy1}
+# Uso dplyr::select porque en la libreria MASS tambien existe una función select y si
+# no especifico da error.
+who1 <- who %>%
+  pivot_longer(c(new_sp_m014:newrel_f65), names_to = "key", values_drop_na = TRUE) %>%
+   mutate(key = stringr::str_replace(key, "newrel", "new_rel")) %>%
+   separate(key, c("new","type","gender_age"), sep = "_") %>%
+   separate(gender_age, c("gender","age"),sep = 1) %>%
+   dplyr::select(country, year, type, gender, age, value)
+knitr::kable(head(who1,7))
+```
+
+Veamos como han ido evolucionando los diferentes tipos de detección de la enfermedad:
+
+```{r, warning=FALSE}
+datos_tip_detecc <- who1 %>%
+  dplyr::select(year, type, value) %>%
+  group_by(year, type) %>%
+  summarise(tot = sum(value))
+
+ggplot(datos_tip_detecc, aes(x = year, y = tot)) + 
+  geom_freqpoly(stat = "identity", aes(color = type)) +
+  xlab("Tipo Detección") +
+  ylab("Casos Totales") 
+```
+
+```{r, include = FALSE, warning=FALSE}
+paises_top <- who1 %>%
+  dplyr::select(year, country, gender, value) %>%
+  group_by(country) %>%
+  summarise(tot = sum(value)) %>%
+  arrange(desc(tot)) %>%
+  head(9)
+
+lista_paises_top <- paises_top$country
+
+datos_pais_1 <- who1 %>%
+    filter(country == lista_paises_top[1]) %>%
+    dplyr::select(year, gender, value) %>%
+    group_by(year, gender) %>%
+    summarise(tot = sum(value))
+
+datos_pais_2 <- who1 %>%
+    filter(country == lista_paises_top[2]) %>%
+    dplyr::select(year, gender, value) %>%
+    group_by(year, gender) %>%
+    summarise(tot = sum(value))
+
+datos_pais_3 <- who1 %>%
+    filter(country == lista_paises_top[3]) %>%
+    dplyr::select(year, gender, value) %>%
+    group_by(year, gender) %>%
+    summarise(tot = sum(value))
+
+datos_pais_4 <- who1 %>%
+    filter(country == lista_paises_top[4]) %>%
+    dplyr::select(year, gender, value) %>%
+    group_by(year, gender) %>%
+    summarise(tot = sum(value))
+
+datos_pais_5 <- who1 %>%
+    filter(country == lista_paises_top[5]) %>%
+    dplyr::select(year, gender, value) %>%
+    group_by(year, gender) %>%
+    summarise(tot = sum(value))
+
+datos_pais_6 <- who1 %>%
+    filter(country == lista_paises_top[6]) %>%
+    dplyr::select(year, gender, value) %>%
+    group_by(year, gender) %>%
+    summarise(tot = sum(value))
+
+datos_pais_7 <- who1 %>%
+    filter(country == lista_paises_top[7]) %>%
+    dplyr::select(year, gender, value) %>%
+    group_by(year, gender) %>%
+    summarise(tot = sum(value))
+
+datos_pais_8 <- who1 %>%
+    filter(country == lista_paises_top[8]) %>%
+    dplyr::select(year, gender, value) %>%
+    group_by(year, gender) %>%
+    summarise(tot = sum(value))
+
+datos_pais_9 <- who1 %>%
+    filter(country == lista_paises_top[9]) %>%
+    dplyr::select(year, gender, value) %>%
+    group_by(year, gender) %>%
+    summarise(tot = sum(value))
+```
+
+
+```{r}
+p1 <- ggplot(datos_pais_1, aes(x = year,y=tot)) + 
+  geom_freqpoly(stat = "identity", aes(color = gender)) + 
+  xlab("Año") + ylab("Casos") + ggtitle(lista_paises_top[1])
+
+p2 <- ggplot(datos_pais_2, aes(x = year,y=tot)) + 
+  geom_freqpoly(stat = "identity", aes(color = gender)) + 
+  xlab("Año") + ylab("Casos") + ggtitle(lista_paises_top[2])
+
+p3 <- ggplot(datos_pais_3, aes(x = year,y=tot)) + 
+  geom_freqpoly(stat = "identity", aes(color = gender)) + 
+  xlab("Año") + ylab("Casos") + ggtitle(lista_paises_top[3])
+
+p4 <- ggplot(datos_pais_4, aes(x = year,y=tot)) + 
+  geom_freqpoly(stat = "identity", aes(color = gender)) + 
+  xlab("Año") + ylab("Casos") + ggtitle(lista_paises_top[4])
+
+p5 <- ggplot(datos_pais_5, aes(x = year,y=tot)) + 
+  geom_freqpoly(stat = "identity", aes(color = gender)) + 
+  xlab("Año") + ylab("Casos") + ggtitle(lista_paises_top[5])
+
+p6 <- ggplot(datos_pais_6, aes(x = year,y=tot)) + 
+  geom_freqpoly(stat = "identity", aes(color = gender)) + 
+  xlab("Año") + ylab("Casos") + ggtitle(lista_paises_top[6])
+
+p7 <- ggplot(datos_pais_7, aes(x = year,y=tot)) + 
+  geom_freqpoly(stat = "identity", aes(color = gender)) + 
+  xlab("Año") + ylab("Casos") + ggtitle(lista_paises_top[7])
+
+p8 <- ggplot(datos_pais_8, aes(x = year,y=tot)) + 
+  geom_freqpoly(stat = "identity", aes(color = gender)) + 
+  xlab("Año") + ylab("Casos") + ggtitle(lista_paises_top[8])
+
+p9 <- ggplot(datos_pais_9, aes(x = year,y=tot)) + 
+  geom_freqpoly(stat = "identity", aes(color = gender)) + 
+  xlab("Año") + ylab("Casos") + ggtitle(lista_paises_top[9])
+
+grid.arrange(p1,p2,p3,p4,p5,p6,p7,p8,p9, nrow = 3)
+```
+
+
+
+También puede resultar interesante ver como ha ido evolucionando la enfermedad en los grupos de edad a nivel mundial.
+
+```{r, message = FALSE, warning=FALSE, fig.align='center', fig.height=4, fig.width=5}
+datos_evo_edad <- who1 %>%
+  dplyr::select(year, age, value) %>%
+  group_by(year, age) %>%
+  summarise(tot = sum(value))
+
+ggplot(datos_evo_edad, aes(x = year, y = tot)) + 
+  geom_line(stat = "identity", aes(color = age)) +
+  xlab("Año") +
+  ylab("Casos Totales") 
+```
+
+
+
+
+
+
+Para terminar vamos a trabajar con el primer pais que aparece en la tabla, Afganistán. Sacaremos diferentes datos que pueden ser de utilidad. 
+
+El primero de ellos será la evolución de la enfermedad en el país a lo largo de los años.
+
+
+```{r afga, fig.align='center', fig.height=5, fig.width=6}
+afga <- who1 %>%
+  filter(country == "Afghanistan") %>%
+  group_by(year) %>%
+  summarise(Casos_Totales = sum(value))
+
+ggplot(afga,aes(x = year, y = Casos_Totales)) + 
+         geom_freqpoly(stat = "identity") + 
+        xlab("Años") + ylab("Casos Totales") +
+        ggtitle("Evolución Afganistán") +
+        theme(plot.title = element_text(hjust = 0.5))
+```
+
+
+
+Ahora veremos como ha sido el comportamiento de la enfermedad a lo largo de los años distinguiendo por género.
+
+```{r, message = FALSE, warning=FALSE, fig.align='center', fig.height=4, fig.width=5}
+afga_evo_genr <- who1 %>%
+  filter(country == "Afghanistan") %>%
+  dplyr::select(year, gender, value) %>%
+  group_by(year, gender) %>%
+  summarise(tot = sum(value))
+
+ggplot(afga_evo_genr, aes(x = year, y = tot)) + 
+  geom_bar(stat = "identity", position=position_dodge(), 
+           aes(fill = gender), color = "black") + 
+  ylab("Casos Totales") +
+  xlab("Año")
+```
+
+
+
+ 
+
+
+
+
+
+
